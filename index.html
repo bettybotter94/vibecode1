@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализ совместимости резюме и вакансий</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .form-group input[type="file"],
+        .form-group input[type="url"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input[type="file"]:hover,
+        .form-group input[type="url"]:hover {
+            border-color: #764ba2;
+        }
+
+        .form-group input[type="url"] {
+            border-style: solid;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .compatibility-score {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .score-label {
+            margin-top: 15px;
+            font-size: 1.2em;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .gaps-list {
+            list-style: none;
+        }
+
+        .gaps-list li {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .gaps-list li strong {
+            color: #ff6b6b;
+        }
+
+        .recommendations-list {
+            list-style: none;
+        }
+
+        .recommendations-list li {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #51cf66;
+        }
+
+        .recommendations-list li::before {
+            content: "✓ ";
+            color: #51cf66;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .skills-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .skills-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .skills-box h4 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 5px 12px;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 0.9em;
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            white-space: pre-line;
+            line-height: 1.6;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .skills-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Анализ резюме и вакансий</h1>
+            <p>Загрузите резюме и ссылку на вакансию для анализа совместимости</p>
+        </div>
+
+        <div class="content">
+            <form id="analysisForm">
+                <div class="form-group">
+                    <label for="resume">Загрузите ваше резюме (PDF, DOCX, TXT)</label>
+                    <input type="file" id="resume" name="resume" accept=".pdf,.docx,.txt" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="jobUrl">Ссылка на вакансию</label>
+                    <input type="url" id="jobUrl" name="job_url" placeholder="https://example.com/job" required>
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">Анализировать</button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px;">Анализируем резюме и вакансию...</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div class="results" id="results">
+                <div class="compatibility-score">
+                    <div class="score-circle" id="scoreCircle">0%</div>
+                    <div class="score-label">Совместимость</div>
+                </div>
+
+                <div class="section">
+                    <h3>🔍 Gap-анализ (чего не хватает)</h3>
+                    <ul class="gaps-list" id="gapsList"></ul>
+                </div>
+
+                <div class="section">
+                    <h3>💡 Рекомендации</h3>
+                    <ul class="recommendations-list" id="recommendationsList"></ul>
+                </div>
+
+                <div class="section">
+                    <h3>🛠️ Сравнение навыков</h3>
+                    <div class="skills-comparison">
+                        <div class="skills-box">
+                            <h4>Навыки в резюме</h4>
+                            <div id="resumeSkills"></div>
+                        </div>
+                        <div class="skills-box">
+                            <h4>Требуемые навыки</h4>
+                            <div id="jobSkills"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('analysisForm');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const error = document.getElementById('error');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Проверяем доступность сервера при загрузке страницы
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/api/health');
+                if (!response.ok) {
+                    console.warn('Сервер недоступен или вернул ошибку');
+                }
+            } catch (err) {
+                console.warn('Не удалось проверить доступность сервера:', err);
+                // Не показываем ошибку пользователю, так как это может быть нормально
+                // если сервер еще не запущен
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            const resumeFile = document.getElementById('resume').files[0];
+            const jobUrl = document.getElementById('jobUrl').value;
+
+            if (!resumeFile || !jobUrl) {
+                showError('Пожалуйста, заполните все поля');
+                return;
+            }
+
+            formData.append('resume', resumeFile);
+            formData.append('job_url', jobUrl);
+
+            // Показываем загрузку
+            loading.classList.add('active');
+            results.classList.remove('active');
+            error.classList.remove('active');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Проверяем, что получили ответ
+                if (!response) {
+                    throw new Error('Не удалось подключиться к серверу. Убедитесь, что сервер запущен.');
+                }
+
+                // Получаем текст ответа (может быть JSON или текст ошибки)
+                const responseText = await response.text();
+                
+                // Пытаемся распарсить как JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (jsonError) {
+                    // Если не JSON, значит это текстовая ошибка
+                    if (!response.ok) {
+                        throw new Error(`Ошибка сервера (${response.status}): ${responseText || response.statusText}`);
+                    } else {
+                        throw new Error(`Неожиданный формат ответа: ${responseText.substring(0, 100)}`);
+                    }
+                }
+
+                // Проверяем статус ответа
+                if (!response.ok) {
+                    const errorMsg = data.detail || data.message || `Ошибка ${response.status}: ${response.statusText}`;
+                    throw new Error(errorMsg);
+                }
+
+                // Проверяем успешность операции
+                if (data.success) {
+                    displayResults(data.result);
+                } else {
+                    throw new Error(data.message || data.detail || 'Неизвестная ошибка');
+                }
+
+            } catch (err) {
+                let errorMessage = err.message || 'Произошла ошибка при анализе. Попробуйте еще раз.';
+                
+                // Более детальные сообщения об ошибках
+                if (err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                    errorMessage = '❌ Не удалось подключиться к серверу.\n\n' +
+                        'Возможные причины:\n' +
+                        '1. Сервер не запущен - убедитесь, что выполнили команду: uvicorn main:app --reload\n' +
+                        '2. Неправильный адрес - проверьте, что открыли http://localhost:8000\n' +
+                        '3. Проблемы с сетью - проверьте интернет-соединение';
+                } else if (err.message.includes('CORS') || err.message.includes('CORS policy')) {
+                    errorMessage = '❌ Ошибка CORS. Сервер не разрешает запросы с этого домена.';
+                } else if (err.message.includes('timeout') || err.message.includes('Timeout')) {
+                    errorMessage = '❌ Превышено время ожидания. Попробуйте еще раз или проверьте ссылку на вакансию.';
+                }
+                
+                showError(errorMessage);
+            } finally {
+                loading.classList.remove('active');
+                submitBtn.disabled = false;
+            }
+        });
+
+        function displayResults(result) {
+            // Показываем процент совместимости
+            const score = result.compatibility_percentage;
+            const scoreCircle = document.getElementById('scoreCircle');
+            scoreCircle.textContent = score + '%';
+
+            // Цвет в зависимости от процента
+            if (score >= 70) {
+                scoreCircle.style.background = 'linear-gradient(135deg, #51cf66 0%, #40c057 100%)';
+            } else if (score >= 50) {
+                scoreCircle.style.background = 'linear-gradient(135deg, #ffd43b 0%, #fcc419 100%)';
+            } else {
+                scoreCircle.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #fa5252 100%)';
+            }
+
+            // Показываем gaps
+            const gapsList = document.getElementById('gapsList');
+            gapsList.innerHTML = '';
+            if (result.gaps && result.gaps.length > 0) {
+                result.gaps.forEach(gap => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${gap.category}:</strong> ${gap.description}`;
+                    gapsList.appendChild(li);
+                });
+            } else {
+                gapsList.innerHTML = '<li>Отлично! Все основные требования выполнены.</li>';
+            }
+
+            // Показываем рекомендации
+            const recommendationsList = document.getElementById('recommendationsList');
+            recommendationsList.innerHTML = '';
+            if (result.recommendations && result.recommendations.length > 0) {
+                result.recommendations.forEach(rec => {
+                    const li = document.createElement('li');
+                    li.textContent = rec;
+                    recommendationsList.appendChild(li);
+                });
+            } else {
+                recommendationsList.innerHTML = '<li>Ваше резюме хорошо соответствует вакансии!</li>';
+            }
+
+            // Показываем навыки
+            const resumeSkillsDiv = document.getElementById('resumeSkills');
+            resumeSkillsDiv.innerHTML = '';
+            if (result.resume_skills && result.resume_skills.length > 0) {
+                result.resume_skills.forEach(skill => {
+                    const tag = document.createElement('span');
+                    tag.className = 'skill-tag';
+                    tag.textContent = skill;
+                    resumeSkillsDiv.appendChild(tag);
+                });
+            } else {
+                resumeSkillsDiv.textContent = 'Навыки не найдены';
+            }
+
+            const jobSkillsDiv = document.getElementById('jobSkills');
+            jobSkillsDiv.innerHTML = '';
+            if (result.job_skills && result.job_skills.length > 0) {
+                result.job_skills.forEach(skill => {
+                    const tag = document.createElement('span');
+                    tag.className = 'skill-tag';
+                    tag.textContent = skill;
+                    jobSkillsDiv.appendChild(tag);
+                });
+            } else {
+                jobSkillsDiv.textContent = 'Требования к навыкам не найдены';
+            }
+
+            // Показываем результаты
+            results.classList.add('active');
+        }
+
+        function showError(message) {
+            // Заменяем переносы строк на HTML теги для правильного отображения
+            const formattedMessage = message.replace(/\n/g, '<br>');
+            error.innerHTML = formattedMessage;
+            error.classList.add('active');
+            
+            // Прокручиваем к ошибке
+            error.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>
+

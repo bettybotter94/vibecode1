@@ -1,0 +1,68 @@
+═══════════════════════════════════════════════════════════
+  КАК ЗАПУШИТЬ КОД НА GITHUB
+═══════════════════════════════════════════════════════════
+
+ПРОБЛЕМА: Требуется аутентификация GitHub
+
+РЕШЕНИЕ 1: Использовать Personal Access Token (РЕКОМЕНДУЕТСЯ)
+─────────────────────────────────────────────────────────────
+
+1. Создайте токен на GitHub:
+   - Откройте: https://github.com/settings/tokens
+   - Нажмите "Generate new token" → "Generate new token (classic)"
+   - Название: "Streamlit Deploy"
+   - Отметьте: repo (все галочки в разделе repo)
+   - Нажмите "Generate token"
+   - СКОПИРУЙТЕ ТОКЕН (показывается только один раз!)
+
+2. В терминале выполните:
+
+   git push -u origin main
+
+3. Когда попросит Username: введите ваш GitHub username (bettybotter94)
+4. Когда попросит Password: вставьте токен (НЕ пароль!)
+
+
+РЕШЕНИЕ 2: Использовать GitHub Desktop (САМЫЙ ПРОСТОЙ)
+──────────────────────────────────────────────────────────
+
+1. Скачайте GitHub Desktop: https://desktop.github.com/
+2. Установите и войдите в GitHub
+3. File → Add Local Repository
+4. Выберите папку: /Users/bettybotter/Desktop/CV-master
+5. Нажмите "Publish repository"
+6. Готово!
+
+
+РЕШЕНИЕ 3: Использовать SSH (для продвинутых)
+───────────────────────────────────────────────
+
+1. Создайте SSH ключ (если нет):
+   ssh-keygen -t ed25519 -C "your_email@example.com"
+
+2. Добавьте ключ в GitHub:
+   - Скопируйте: cat ~/.ssh/id_ed25519.pub
+   - GitHub → Settings → SSH and GPG keys → New SSH key
+
+3. Измените URL на SSH:
+   git remote set-url origin git@github.com:bettybotter94/vibecode1.git
+
+4. Запушьте:
+   git push -u origin main
+
+
+РЕШЕНИЕ 4: Через веб-интерфейс GitHub
+───────────────────────────────────────
+
+1. Откройте репозиторий на GitHub
+2. Нажмите "uploading an existing file"
+3. Перетащите все файлы из папки CV-master
+4. Commit changes
+5. Готово!
+
+
+РЕКОМЕНДАЦИЯ:
+──────────────
+
+Для первого раза используйте GitHub Desktop - это самый простой способ!
+

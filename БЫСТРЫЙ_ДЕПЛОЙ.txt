@@ -1,0 +1,71 @@
+═══════════════════════════════════════════════════════════
+  БЫСТРЫЙ ДЕПЛОЙ НА STREAMLIT CLOUD
+═══════════════════════════════════════════════════════════
+
+✅ Git репозиторий уже создан локально!
+
+ТЕПЕРЬ СДЕЛАЙТЕ:
+
+ШАГ 1: Создайте репозиторий на GitHub
+───────────────────────────────────────
+
+1. Откройте https://github.com
+2. Войдите (или создайте аккаунт)
+3. Нажмите "+" → "New repository"
+4. Название: cv-analysis-service (или любое другое)
+5. Выберите "Public" (обязательно!)
+6. НЕ отмечайте "Initialize with README"
+7. Нажмите "Create repository"
+
+
+ШАГ 2: Подключите к GitHub
+────────────────────────────
+
+После создания репозитория GitHub покажет инструкции.
+
+Выполните в терминале (замените YOUR_USERNAME на ваш GitHub username):
+
+git remote add origin https://github.com/YOUR_USERNAME/cv-analysis-service.git
+git push -u origin main
+
+Например, если ваш username "bettybotter":
+git remote add origin https://github.com/bettybotter/cv-analysis-service.git
+git push -u origin main
+
+
+ШАГ 3: Деплой на Streamlit Cloud
+──────────────────────────────────
+
+1. Откройте https://share.streamlit.io
+2. Войдите через GitHub
+3. Нажмите "New app"
+4. Выберите ваш репозиторий: cv-analysis-service
+5. Branch: main
+6. Main file path: streamlit_app.py
+7. Нажмите "Deploy"
+
+
+ШАГ 4: Готово!
+───────────────
+
+Через 1-2 минуты ваше приложение будет доступно по адресу:
+https://YOUR_APP_NAME.streamlit.app
+
+Вы сможете делиться ссылкой с другими!
+
+
+ПОМОЩЬ:
+────────
+
+Если не знаете свой GitHub username:
+- Зайдите на github.com
+- Посмотрите в правом верхнем углу - там ваш username
+
+Если забыли пароль GitHub:
+- Используйте восстановление пароля
+- Или создайте новый аккаунт
+
+Если не можете запушить код:
+- Убедитесь, что вы авторизованы: git config --global user.name "Ваше имя"
+- Или используйте GitHub Desktop (проще для начинающих)
+
