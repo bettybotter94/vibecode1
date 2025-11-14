@@ -6,17 +6,66 @@ import streamlit as st
 import os
 import tempfile
 from typing import Dict
+import pandas as pd
 
 from resume_parser import ResumeParser
 from job_parser import JobParser
 from analyzer import CompatibilityAnalyzer
 
-# Настройка страницы
+# Настройка страницы в стиле Школы 21
 st.set_page_config(
-    page_title="Анализ резюме и вакансий",
+    page_title="Анализ резюме и вакансий | Школа 21",
     page_icon="📄",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
+# Глобальные стили Школы 21
+SCHOOL21_GREEN = "#00B956"
+SCHOOL21_BLUE = "#00AEEF"
+SCHOOL21_BG = "#F5F5F5"
+SCHOOL21_TEXT = "#333333"
+
+# Применяем стили
+st.markdown(f"""
+    <style>
+    /* Основные стили */
+    .main {{
+        background-color: {SCHOOL21_BG};
+    }}
+    
+    /* Заголовки */
+    h1, h2, h3 {{
+        color: {SCHOOL21_TEXT};
+    }}
+    
+    /* Кнопки */
+    .stButton > button {{
+        background: linear-gradient(135deg, {SCHOOL21_BLUE} 0%, {SCHOOL21_GREEN} 100%);
+        color: white;
+        font-weight: bold;
+        border-radius: 10px;
+        border: none;
+        transition: all 0.3s;
+    }}
+    
+    .stButton > button:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 174, 239, 0.3);
+        filter: brightness(0.9);
+    }}
+    
+    /* Метрики */
+    [data-testid="stMetricValue"] {{
+        color: {SCHOOL21_GREEN};
+    }}
+    
+    /* Боковая панель */
+    .css-1d391kg {{
+        background-color: white;
+    }}
+    </style>
+""", unsafe_allow_html=True)
 
 # Инициализация парсеров и анализатора
 @st.cache_resource
@@ -35,117 +84,259 @@ analyzer = parsers['analyzer']
 
 
 def display_results(result: Dict) -> None:
-    """Отображает результаты анализа"""
-    st.divider()
-    st.header("📊 Результаты анализа")
-    
-    # Процент совместимости
+    """Отображает результаты анализа в стиле Школы 21"""
     compatibility = result['compatibility_percentage']
+    breakdown = result.get('breakdown', {})
+    motivational_message = result.get('motivational_message', '')
     
-    # Определяем цвет в зависимости от процента
+    # Определяем цвет в стиле Школы 21
     if compatibility >= 70:
-        color = "🟢"
+        color_hex = SCHOOL21_GREEN
         status = "Отлично!"
     elif compatibility >= 50:
-        color = "🟡"
+        color_hex = SCHOOL21_BLUE
         status = "Хорошо"
     else:
-        color = "🔴"
+        color_hex = "#FF6B6B"
         status = "Требуется улучшение"
     
-    # Отображаем процент совместимости
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown(f"### {color} Совместимость: **{compatibility}%**")
-        st.markdown(f"*{status}*")
-        
-        # Прогресс-бар
-        st.progress(compatibility / 100)
+    # Мотивационное сообщение
+    if motivational_message:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, {SCHOOL21_BLUE} 0%, {SCHOOL21_GREEN} 100%);
+                    padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;">
+            <h3 style="color: white; margin: 0;">{motivational_message}</h3>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.divider()
     
-    # Gap-анализ
+    # Главный процент совместимости
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(f"""
+        <div style="text-align: center; padding: 30px;">
+            <h1 style="font-size: 5em; color: {color_hex}; margin: 0; font-weight: bold;">{compatibility}%</h1>
+            <h3 style="color: {SCHOOL21_TEXT}; margin-top: 10px;">{status}</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Прогресс-бар с градиентом Школы 21
+        progress_html = f"""
+        <div style="background: {SCHOOL21_BG}; border-radius: 10px; height: 30px; margin: 20px 0;">
+            <div style="background: linear-gradient(90deg, {SCHOOL21_BLUE} 0%, {SCHOOL21_GREEN} 100%);
+                        width: {compatibility}%; height: 100%; border-radius: 10px; transition: width 1s ease;"></div>
+        </div>
+        """
+        st.markdown(progress_html, unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # Детальная разбивка совместимости
+    if breakdown:
+        st.subheader("📊 Детальная разбивка совместимости")
+        
+        breakdown_names = {
+            'required_skills': 'Обязательные навыки',
+            'preferred_skills': 'Желательные навыки',
+            'experience': 'Опыт работы',
+            'education': 'Образование',
+            'soft_skills': 'Soft skills'
+        }
+        
+        for key, name in breakdown_names.items():
+            if key in breakdown:
+                cat_data = breakdown[key]
+                score = cat_data['score']
+                max_score = cat_data['max']
+                percentage = cat_data.get('percentage', 0)
+                details = cat_data.get('details', [])
+                
+                # Прогресс-бар для категории
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown(f"**{name}**")
+                    # Кастомный прогресс-бар
+                    progress_color = SCHOOL21_GREEN if percentage >= 80 else SCHOOL21_BLUE if percentage >= 50 else "#FF6B6B"
+                    st.markdown(f"""
+                    <div style="background: {SCHOOL21_BG}; border-radius: 5px; height: 25px; margin: 5px 0;">
+                        <div style="background: {progress_color}; width: {percentage}%; height: 100%; 
+                                    border-radius: 5px; display: flex; align-items: center; padding-left: 10px;">
+                            <span style="color: white; font-weight: bold;">{score}/{max_score} ({percentage}%)</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if details:
+                        for detail in details:
+                            st.caption(f"  • {detail}")
+                
+                with col2:
+                    st.metric("", f"{percentage}%")
+        
+        st.divider()
+    
+    # Сводная таблица навыков
+    skills_table = result.get('skills_table', [])
+    if skills_table:
+        st.subheader("📋 Сводная таблица навыков")
+        
+        # Создаем DataFrame для таблицы
+        table_data = []
+        for item in skills_table:
+            table_data.append({
+                'Навык': item['skill'],
+                'Статус': f"{item['status_icon']} {item['status_text']}",
+                'Уровень': item['level'],
+                'Что делать': item['action']
+            })
+        
+        df = pd.DataFrame(table_data)
+        
+        # Стилизуем таблицу
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Навык": st.column_config.TextColumn("Навык", width="medium"),
+                "Статус": st.column_config.TextColumn("Статус", width="small"),
+                "Уровень": st.column_config.TextColumn("Уровень", width="small"),
+                "Что делать": st.column_config.TextColumn("Что делать", width="large")
+            }
+        )
+        
+        st.divider()
+    
+    # Визуализация сравнения навыков (если нет таблицы)
+    resume_skills = result.get('resume_skills', [])
+    job_skills = result.get('job_skills', [])
+    
+    if (resume_skills or job_skills) and not skills_table:
+        st.subheader("🛠️ Сравнение навыков")
+        
+        if resume_skills and job_skills:
+            matching_skills = set(s.lower() for s in resume_skills) & set(s.lower() for s in job_skills)
+            missing_skills = set(s.lower() for s in job_skills) - set(s.lower() for s in resume_skills)
+            
+            # Метрики
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Всего навыков в резюме", len(resume_skills))
+            with col2:
+                st.metric("Требуется навыков", len(job_skills))
+            with col3:
+                st.metric("Совпадает", len(matching_skills), delta=f"{len(job_skills) and int(len(matching_skills)/len(job_skills)*100) or 0}%")
+            with col4:
+                st.metric("Не хватает", len(missing_skills), delta=f"-{len(missing_skills)}", delta_color="inverse")
+        
+        st.divider()
+    
+    
+    # Gap-анализ с приоритетами
     st.subheader("🔍 Gap-анализ (чего не хватает)")
     
     if result.get('gaps') and len(result['gaps']) > 0:
-        for gap in result['gaps']:
-            with st.expander(f"❌ {gap['category']}", expanded=True):
+        # Сортируем gaps по важности (навыки - критично, остальное - важно)
+        sorted_gaps = sorted(result['gaps'], key=lambda x: 0 if x['category'] == 'Навыки' else 1)
+        
+        for gap in sorted_gaps:
+            # Определяем приоритет
+            if gap['category'] == 'Навыки':
+                priority_icon = "🔴"
+                priority_text = "Критично"
+            elif gap['category'] == 'Опыт работы':
+                priority_icon = "🟡"
+                priority_text = "Важно"
+            else:
+                priority_icon = "🟢"
+                priority_text = "Желательно"
+            
+            with st.expander(f"{priority_icon} {gap['category']} ({priority_text})", expanded=True):
                 st.write(f"**Описание:** {gap['description']}")
                 if gap.get('items'):
                     st.write("**Детали:**")
-                    for item in gap['items']:
+                    # Показываем только первые 10 элементов
+                    for item in gap['items'][:10]:
                         st.write(f"- {item}")
+                    if len(gap['items']) > 10:
+                        st.caption(f"... и еще {len(gap['items']) - 10} элементов")
     else:
         st.success("✅ Отлично! Все основные требования выполнены.")
     
     st.divider()
     
-    # Рекомендации
-    st.subheader("💡 Рекомендации")
+    # Мотивационные рекомендации в стиле Школы 21
+    st.subheader("💡 Рекомендации по улучшению")
     
-    if result.get('recommendations') and len(result['recommendations']) > 0:
-        for rec in result['recommendations']:
-            st.info(f"💡 {rec}")
+    recommendations = result.get('recommendations', [])
+    if recommendations and len(recommendations) > 0:
+        # Группируем рекомендации по типам
+        current_section = None
+        for rec in recommendations:
+            # Определяем тип секции
+            if "🎯" in rec:
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, {SCHOOL21_BLUE} 0%, {SCHOOL21_GREEN} 100%);
+                            padding: 15px; border-radius: 8px; margin: 10px 0; color: white;">
+                    <strong style="color: white; font-size: 1.1em;">{rec}</strong>
+                </div>
+                """, unsafe_allow_html=True)
+            elif "💪" in rec or "🚀" in rec:
+                st.markdown(f"### {rec}")
+            elif "📚" in rec:
+                st.markdown(f"### {rec}")
+            elif rec.strip().startswith(('1.', '2.', '3.', '4.', '5.')):
+                st.markdown(f"**{rec}**")
+            else:
+                st.info(f"💡 {rec}")
     else:
         st.success("✅ Ваше резюме хорошо соответствует вакансии!")
     
     st.divider()
-    
-    # Сравнение навыков
-    st.subheader("🛠️ Сравнение навыков")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("##### Навыки в резюме")
-        resume_skills = result.get('resume_skills', [])
-        if resume_skills:
-            for skill in resume_skills:
-                st.markdown(f"- {skill}")
-        else:
-            st.write("Навыки не найдены")
-    
-    with col2:
-        st.markdown("##### Требуемые навыки")
-        job_skills = result.get('job_skills', [])
-        if job_skills:
-            for skill in job_skills:
-                st.markdown(f"- {skill}")
-        else:
-            st.write("Требования к навыкам не найдены")
-    
-    # Подсчет совпадений
-    if resume_skills and job_skills:
-        matching_skills = set(s.lower() for s in resume_skills) & set(s.lower() for s in job_skills)
-        if matching_skills:
-            st.success(f"✅ Совпадающие навыки ({len(matching_skills)}): {', '.join(matching_skills)}")
 
 
-# Заголовок приложения
-st.title("📄 Анализ совместимости резюме и вакансий")
-st.markdown("Загрузите ваше резюме и ссылку на вакансию для анализа совместимости")
+# Заголовок приложения в стиле Школы 21
+st.markdown("""
+    <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #00AEEF 0%, #00B956 100%);
+                border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 174, 239, 0.2);">
+        <h1 style="font-size: 3.5em; color: white; margin: 0; font-weight: bold;">
+            📄 Анализ совместимости резюме и вакансий
+        </h1>
+        <p style="font-size: 1.3em; color: white; margin-top: 15px; opacity: 0.95;">
+            Загрузите ваше резюме и ссылку на вакансию для анализа совместимости
+        </p>
+    </div>
+""", unsafe_allow_html=True)
 
 # Создаем две колонки для формы
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📎 Загрузите резюме")
+    st.markdown("### 📎 Загрузите резюме")
     uploaded_file = st.file_uploader(
         "Выберите файл резюме",
         type=['pdf', 'docx', 'txt'],
-        help="Поддерживаются форматы: PDF, DOCX, TXT"
+        help="Поддерживаются форматы: PDF, DOCX, TXT",
+        label_visibility="collapsed"
     )
+    if uploaded_file:
+        st.success(f"✅ Загружен: {uploaded_file.name}")
 
 with col2:
-    st.subheader("🔗 Ссылка на вакансию")
+    st.markdown("### 🔗 Ссылка на вакансию")
     job_url = st.text_input(
         "Вставьте URL вакансии",
-        placeholder="https://example.com/job",
-        help="Вставьте ссылку на вакансию с любого сайта"
+        placeholder="https://hh.ru/vacancy/12345678",
+        help="Вставьте ссылку на вакансию с любого сайта (HeadHunter, Habr и т.д.)",
+        label_visibility="collapsed"
     )
+    if job_url:
+        st.info(f"🔗 Анализируем: {job_url[:50]}...")
 
-# Кнопка анализа
-analyze_button = st.button("🔍 Анализировать", type="primary", use_container_width=True)
+# Кнопка анализа в стиле Школы 21
+st.markdown("<br>", unsafe_allow_html=True)
+analyze_button = st.button("🔍 Анализировать совместимость", type="primary", use_container_width=True)
 
 # Обработка анализа
 if analyze_button:
@@ -224,47 +415,63 @@ if analyze_button:
                 st.write(f"**Сообщение:** {error_msg}")
 
 
-# Информация в боковой панели
+# Информация в боковой панели в стиле Школы 21
 with st.sidebar:
-    st.header("ℹ️ О сервисе")
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, {SCHOOL21_BLUE} 0%, {SCHOOL21_GREEN} 100%);
+                padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;">
+        <h2 style="color: white; margin: 0;">ℹ️ О сервисе</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
     st.markdown("""
     Этот сервис анализирует совместимость вашего резюме с вакансией.
     
     **Что анализируется:**
-    - Навыки и технологии
-    - Опыт работы
-    - Образование
-    - Общее соответствие требованиям
+    - ✅ Обязательные навыки (50%)
+    - ⭐ Желательные навыки (30%)
+    - 💼 Опыт работы (10%)
+    - 🎓 Образование (5%)
+    - 🤝 Soft skills (5%)
     
     **Результаты включают:**
-    - Процент совместимости
-    - Gap-анализ (чего не хватает)
-    - Рекомендации по улучшению
+    - 📊 Детальную разбивку совместимости
+    - 📋 Сводную таблицу навыков
+    - 🔍 Gap-анализ с приоритетами
+    - 💡 Мотивационные рекомендации
     """)
     
     st.divider()
     
     st.markdown("### 📝 Поддерживаемые форматы")
-    st.markdown("- PDF")
-    st.markdown("- DOCX (Word)")
-    st.markdown("- TXT")
+    st.markdown("- 📄 PDF")
+    st.markdown("- 📝 DOCX (Word)")
+    st.markdown("- 📄 TXT")
     
     st.divider()
     
     st.markdown("### 🔗 Как использовать ссылки")
     st.markdown("""
     **HeadHunter (hh.ru):**
-    - Скопируйте ссылку из адресной строки браузера
-    - Убедитесь, что вакансия открыта (не требует авторизации)
+    - Скопируйте ссылку из адресной строки
+    - Убедитесь, что вакансия открыта
     - Пример: `https://hh.ru/vacancy/12345678`
     
     **Другие сайты:**
-    - Работают ссылки с большинства сайтов вакансий
-    - Убедитесь, что ссылка начинается с http:// или https://
+    - Работают ссылки с большинства сайтов
+    - Ссылка должна начинаться с http:// или https://
     """)
     
     st.divider()
     
-    if st.button("🔄 Обновить страницу"):
+    st.markdown(f"""
+    <div style="text-align: center; padding: 15px; background: {SCHOOL21_BG}; border-radius: 8px;">
+        <p style="color: {SCHOOL21_TEXT}; margin: 0; font-size: 0.9em;">
+            🎓 Сделано для Школы 21
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("🔄 Обновить страницу", use_container_width=True):
         st.rerun()
 
