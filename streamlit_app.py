@@ -467,7 +467,7 @@ with st.sidebar:
     st.markdown(f"""
     <div style="text-align: center; padding: 15px; background: {SCHOOL21_BG}; border-radius: 8px;">
         <p style="color: {SCHOOL21_TEXT}; margin: 0; font-size: 0.9em;">
-            🎓 Сделано для Школы 21
+            🎓 Сделано для «Школы 21»
         </p>
     </div>
     """, unsafe_allow_html=True)
