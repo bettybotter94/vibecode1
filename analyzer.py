@@ -524,10 +524,11 @@ class CompatibilityAnalyzer:
         
         missing_skills = set(job_skills) - set(resume_skills)
         if missing_skills:
+            missing_skills_list = list(missing_skills)
             gaps.append({
                 'category': 'Навыки',
-                'items': list(missing_skills),
-                'description': f'Отсутствуют навыки: {", ".join(missing_skills[:5])}'
+                'items': missing_skills_list,
+                'description': f'Отсутствуют навыки: {", ".join(missing_skills_list[:5])}'
             })
         
         # 2. Проверка опыта
