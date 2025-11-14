@@ -73,24 +73,129 @@ class ResumeParser:
         return text
     
     def _extract_skills(self, text: str) -> List[str]:
-        """Извлекает навыки из текста"""
-        # Список популярных навыков для поиска
-        common_skills = [
-            'Python', 'JavaScript', 'Java', 'C++', 'C#', 'Go', 'Rust',
-            'React', 'Vue', 'Angular', 'Node.js', 'Django', 'Flask',
-            'SQL', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis',
-            'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP',
-            'Git', 'Linux', 'Agile', 'Scrum', 'CI/CD',
-            'Machine Learning', 'Data Science', 'TensorFlow', 'PyTorch',
-            'HTML', 'CSS', 'TypeScript', 'REST API', 'GraphQL'
-        ]
+        """Извлекает навыки из текста с улучшенным поиском"""
+        # Расширенный список навыков с синонимами
+        skills_dict = {
+            # Языки программирования
+            'Python': ['python', 'python3', 'python 3', 'py', 'django', 'flask', 'fastapi'],
+            'JavaScript': ['javascript', 'js', 'ecmascript', 'node.js', 'nodejs', 'node'],
+            'TypeScript': ['typescript', 'ts'],
+            'Java': ['java', 'spring', 'spring boot'],
+            'C++': ['c++', 'cpp', 'c plus plus'],
+            'C#': ['c#', 'csharp', 'dotnet', '.net', 'asp.net'],
+            'Go': ['go', 'golang'],
+            'Rust': ['rust'],
+            'PHP': ['php'],
+            'Ruby': ['ruby', 'rails', 'ruby on rails'],
+            'Swift': ['swift'],
+            'Kotlin': ['kotlin'],
+            'Scala': ['scala'],
+            'R': ['r language', 'r programming'],
+            
+            # Фреймворки и библиотеки
+            'React': ['react', 'react.js', 'reactjs'],
+            'Vue': ['vue', 'vue.js', 'vuejs'],
+            'Angular': ['angular', 'angularjs'],
+            'Node.js': ['node.js', 'nodejs', 'node', 'express'],
+            'Django': ['django'],
+            'Flask': ['flask'],
+            'FastAPI': ['fastapi', 'fast api'],
+            'Spring': ['spring', 'spring boot', 'spring framework'],
+            'Laravel': ['laravel'],
+            'Symfony': ['symfony'],
+            
+            # Базы данных
+            'SQL': ['sql', 'mysql', 'postgresql', 'oracle', 'mssql'],
+            'PostgreSQL': ['postgresql', 'postgres', 'pg'],
+            'MySQL': ['mysql', 'mariadb'],
+            'MongoDB': ['mongodb', 'mongo'],
+            'Redis': ['redis'],
+            'Elasticsearch': ['elasticsearch', 'elastic'],
+            'Cassandra': ['cassandra'],
+            'DynamoDB': ['dynamodb', 'dynamo db'],
+            
+            # Облачные платформы
+            'AWS': ['aws', 'amazon web services', 'amazon aws'],
+            'Azure': ['azure', 'microsoft azure'],
+            'GCP': ['gcp', 'google cloud', 'google cloud platform'],
+            'Docker': ['docker', 'dockerfile', 'docker compose'],
+            'Kubernetes': ['kubernetes', 'k8s'],
+            'Terraform': ['terraform'],
+            'Ansible': ['ansible'],
+            
+            # Инструменты
+            'Git': ['git', 'github', 'gitlab', 'bitbucket'],
+            'Linux': ['linux', 'unix', 'bash', 'shell'],
+            'CI/CD': ['ci/cd', 'jenkins', 'gitlab ci', 'github actions', 'circleci'],
+            'Jira': ['jira'],
+            'Confluence': ['confluence'],
+            
+            # Методологии
+            'Agile': ['agile', 'scrum', 'kanban'],
+            'Scrum': ['scrum', 'scrum master'],
+            'DevOps': ['devops', 'dev ops'],
+            
+            # Data Science & ML
+            'Machine Learning': ['machine learning', 'ml', 'deep learning'],
+            'Data Science': ['data science', 'data scientist'],
+            'TensorFlow': ['tensorflow', 'tf'],
+            'PyTorch': ['pytorch', 'torch'],
+            'Pandas': ['pandas', 'pd'],
+            'NumPy': ['numpy', 'np'],
+            'Scikit-learn': ['scikit-learn', 'sklearn', 'scikit learn'],
+            
+            # Frontend
+            'HTML': ['html', 'html5'],
+            'CSS': ['css', 'css3', 'sass', 'scss', 'less'],
+            'Bootstrap': ['bootstrap'],
+            'Tailwind CSS': ['tailwind', 'tailwind css'],
+            'Webpack': ['webpack'],
+            'Vite': ['vite'],
+            
+            # API
+            'REST API': ['rest', 'rest api', 'restful', 'restful api'],
+            'GraphQL': ['graphql', 'graph ql'],
+            'gRPC': ['grpc', 'g rpc'],
+            
+            # Другие
+            'Microservices': ['microservices', 'micro services'],
+            'RabbitMQ': ['rabbitmq', 'rabbit mq'],
+            'Kafka': ['kafka', 'apache kafka'],
+        }
         
         text_lower = text.lower()
         found_skills = []
+        found_skill_names = set()  # Чтобы избежать дубликатов
         
-        for skill in common_skills:
-            if skill.lower() in text_lower:
-                found_skills.append(skill)
+        # Ищем навыки по синонимам
+        for skill_name, synonyms in skills_dict.items():
+            for synonym in synonyms:
+                if synonym.lower() in text_lower:
+                    if skill_name not in found_skill_names:
+                        found_skills.append(skill_name)
+                        found_skill_names.add(skill_name)
+                    break  # Нашли один синоним, переходим к следующему навыку
+        
+        # Дополнительный поиск: ищем паттерны типа "работал с X", "опыт работы с Y"
+        import re
+        patterns = [
+            r'(?:работал|работала|опыт|знаю|владею|использую|применяю)[\s\w,]+(?:с|в|на)\s+([A-Z][a-zA-Z\s\+#\.]+)',
+            r'(?:технологии|технология|навыки|навык)[\s:]+([A-Z][a-zA-Z\s,]+)',
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                # Очищаем и проверяем, не является ли это уже найденным навыком
+                cleaned = match.strip().rstrip(',').split(',')[0].strip()
+                if len(cleaned) > 2 and cleaned not in found_skill_names:
+                    # Проверяем, не является ли это известным навыком
+                    for skill_name, synonyms in skills_dict.items():
+                        if any(syn.lower() in cleaned.lower() for syn in synonyms):
+                            if skill_name not in found_skill_names:
+                                found_skills.append(skill_name)
+                                found_skill_names.add(skill_name)
+                            break
         
         return found_skills
     
