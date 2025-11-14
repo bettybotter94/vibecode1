@@ -168,27 +168,11 @@ class JobParser:
         return text[:2000]  # Ограничиваем длину
     
     def _extract_skills(self, text: str) -> List[str]:
-        """Извлекает требуемые навыки"""
-        # Список популярных навыков
-        common_skills = [
-            'Python', 'JavaScript', 'Java', 'C++', 'C#', 'Go', 'Rust',
-            'React', 'Vue', 'Angular', 'Node.js', 'Django', 'Flask',
-            'SQL', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis',
-            'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP',
-            'Git', 'Linux', 'Agile', 'Scrum', 'CI/CD',
-            'Machine Learning', 'Data Science', 'TensorFlow', 'PyTorch',
-            'HTML', 'CSS', 'TypeScript', 'REST API', 'GraphQL',
-            'PHP', 'Ruby', 'Swift', 'Kotlin', 'Scala'
-        ]
-        
-        text_lower = text.lower()
-        found_skills = []
-        
-        for skill in common_skills:
-            if skill.lower() in text_lower:
-                found_skills.append(skill)
-        
-        return found_skills
+        """Извлекает требуемые навыки с улучшенным поиском"""
+        # Используем тот же словарь навыков, что и в resume_parser
+        from resume_parser import ResumeParser
+        temp_parser = ResumeParser()
+        return temp_parser._extract_skills(text)
     
     def _extract_experience_requirement(self, text: str) -> str:
         """Извлекает требования к опыту работы"""
