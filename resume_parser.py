@@ -168,24 +168,6 @@ class ResumeParser:
         found_skills = []
         found_skill_names = set()  # Чтобы избежать дубликатов
         
-        # Ключевые слова, указывающие на навык (контекст)
-        skill_context_keywords = [
-            'работал', 'работала', 'работаю', 'работает',
-            'опыт', 'опытом', 'опыте',
-            'знаю', 'знает', 'знание',
-            'владею', 'владеет', 'владение',
-            'использую', 'использует', 'использование',
-            'применяю', 'применяет', 'применение',
-            'умею', 'умеет', 'умение',
-            'навык', 'навыки', 'навыками',
-            'технология', 'технологии', 'технологиями',
-            'инструмент', 'инструменты', 'инструментами',
-            'язык', 'языки', 'языками',
-            'фреймворк', 'фреймворки', 'фреймворками',
-            'библиотека', 'библиотеки', 'библиотеками',
-            'с', 'в', 'на', 'через', 'посредством'
-        ]
-        
         # Слова, которые исключают навык (ложные срабатывания)
         exclude_keywords = [
             'не знаю', 'не умею', 'не владею', 'не использую',
@@ -193,7 +175,7 @@ class ResumeParser:
             'без опыта', 'нет опыта', 'не имею опыта'
         ]
         
-        # Ищем навыки по синонимам с проверкой контекста
+        # Ищем навыки по синонимам (упрощенная логика)
         for skill_name, synonyms in skills_dict.items():
             for synonym in synonyms:
                 synonym_lower = synonym.lower()
@@ -212,9 +194,9 @@ class ResumeParser:
                     start_pos = match.start()
                     end_pos = match.end()
                     
-                    # Берем контекст вокруг найденного слова (50 символов до и после)
-                    context_start = max(0, start_pos - 50)
-                    context_end = min(len(text_lower), end_pos + 50)
+                    # Берем контекст вокруг найденного слова (30 символов до и после)
+                    context_start = max(0, start_pos - 30)
+                    context_end = min(len(text_lower), end_pos + 30)
                     context = text_lower[context_start:context_end]
                     
                     # Проверяем, нет ли исключающих слов
@@ -222,33 +204,18 @@ class ResumeParser:
                     if has_exclude:
                         continue
                     
-                    # Для некоторых навыков нужна более строгая проверка
-                    if skill_name == 'Git':
-                        # Git должен быть упомянут отдельно, не только как часть GitHub/GitLab
+                    # Специальная проверка только для Git (чтобы не находить в GitHub/GitLab)
+                    if skill_name == 'Git' and synonym_lower == 'git':
+                        # Если рядом есть github/gitlab/bitbucket, проверяем, что git упомянут отдельно
                         if 'github' in context or 'gitlab' in context or 'bitbucket' in context:
-                            # Проверяем, что Git упомянут отдельно
-                            if not re.search(r'\bgit\b', context.replace('github', '').replace('gitlab', '').replace('bitbucket', '')):
+                            # Убираем эти слова из контекста и проверяем, остался ли git
+                            clean_context = context.replace('github', '').replace('gitlab', '').replace('bitbucket', '')
+                            if not re.search(r'\bgit\b', clean_context):
                                 continue
                     
-                    if skill_name == 'REST API':
-                        # REST API должен быть упомянут в контексте API/разработки
-                        api_context = ['api', 'интерфейс', 'endpoint', 'запрос', 'response', 'http', 'https']
-                        if not any(api_ctx in context for api_ctx in api_context):
-                            # Если нет контекста API, проверяем наличие ключевых слов навыка
-                            if not any(keyword in context for keyword in skill_context_keywords):
-                                continue
-                    
-                    # Проверяем наличие контекстных слов (для большинства навыков)
-                    # Исключение: если навык упомянут в списке навыков или технологий
-                    is_in_skills_section = any(keyword in context for keyword in ['навык', 'технологи', 'инструмент', 'язык', 'фреймворк', 'библиотека'])
-                    has_context = any(keyword in context for keyword in skill_context_keywords)
-                    
-                    # Навык считается валидным, если:
-                    # 1. Он в секции навыков/технологий, ИЛИ
-                    # 2. Есть контекстные слова рядом
-                    if is_in_skills_section or has_context:
-                        found_valid = True
-                        break
+                    # Для остальных навыков - просто проверяем наличие слова
+                    found_valid = True
+                    break
                 
                 if found_valid and skill_name not in found_skill_names:
                     found_skills.append(skill_name)
