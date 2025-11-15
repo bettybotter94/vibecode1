@@ -186,90 +186,55 @@ def display_results(result: Dict) -> None:
                 # Счет и детали
                 st.caption(f"**{score}/{max_score}** баллов")
                 
-                # Детали
+                # Показываем конкретные навыки для категорий навыков
+                if key in ['required_skills', 'preferred_skills']:
+                    matching_skills = cat_data.get('matching_skills', [])
+                    missing_skills = cat_data.get('missing_skills', [])
+                    
+                    if matching_skills:
+                        st.markdown(f"**✅ Найдено в резюме ({len(matching_skills)}):**")
+                        # Показываем навыки в виде тегов
+                        cols = st.columns(min(5, len(matching_skills)))
+                        for i, skill in enumerate(matching_skills[:10]):
+                            with cols[i % 5]:
+                                st.markdown(f"<span style='background: {SCHOOL21_GREEN}; color: white; padding: 4px 8px; border-radius: 5px; font-size: 0.85em;'>{skill}</span>", unsafe_allow_html=True)
+                        if len(matching_skills) > 10:
+                            st.caption(f"... и еще {len(matching_skills) - 10} навыков")
+                        st.markdown("")
+                    
+                    if missing_skills:
+                        st.markdown(f"**❌ Не найдено в резюме ({len(missing_skills)}):**")
+                        cols = st.columns(min(5, len(missing_skills)))
+                        for i, skill in enumerate(missing_skills[:10]):
+                            with cols[i % 5]:
+                                st.markdown(f"<span style='background: #FF6B6B; color: white; padding: 4px 8px; border-radius: 5px; font-size: 0.85em;'>{skill}</span>", unsafe_allow_html=True)
+                        if len(missing_skills) > 10:
+                            st.caption(f"... и еще {len(missing_skills) - 10} навыков")
+                        st.markdown("")
+                
+                # Детали расчета
                 if details:
+                    # Разделяем детали на общие и расчет
+                    general_details = []
+                    calculation_detail = None
+                    
                     for detail in details:
-                        st.caption(f"  • {detail}")
+                        if 'Расчет:' in detail:
+                            calculation_detail = detail
+                        else:
+                            general_details.append(detail)
+                    
+                    # Показываем общие детали
+                    if general_details:
+                        for detail in general_details:
+                            st.caption(f"  • {detail}")
+                    
+                    # Показываем расчет отдельно (более заметно)
+                    if calculation_detail:
+                        st.markdown(f"**{calculation_detail}**")
                 
                 # Разделитель между категориями
                 st.markdown("<br>", unsafe_allow_html=True)
-        
-        st.divider()
-    
-    # Детальный анализ требований и соответствия
-    st.subheader("📋 Детальный анализ требований")
-    
-    # Показываем требования из вакансии
-    job_skills = result.get('job_skills', [])
-    resume_skills = result.get('resume_skills', [])
-    
-    if job_skills:
-        st.markdown("#### 🎯 Требования из вакансии:")
-        
-        # Группируем навыки по статусу
-        present_skills = []
-        partial_skills = []
-        missing_skills = []
-        
-        resume_skills_lower = [s.lower() for s in resume_skills]
-        
-        for skill in job_skills:
-            skill_lower = skill.lower()
-            if skill_lower in resume_skills_lower:
-                present_skills.append(skill)
-            elif any(skill_lower in rs or rs in skill_lower for rs in resume_skills_lower):
-                partial_skills.append(skill)
-            else:
-                missing_skills.append(skill)
-        
-        # Показываем найденные навыки
-        if present_skills:
-            st.markdown(f"**✅ Найдено в резюме ({len(present_skills)}):**")
-            cols = st.columns(min(3, len(present_skills)))
-            for i, skill in enumerate(present_skills[:9]):  # Показываем до 9 навыков
-                with cols[i % 3]:
-                    st.success(f"✅ {skill}")
-            if len(present_skills) > 9:
-                st.caption(f"... и еще {len(present_skills) - 9} навыков")
-            st.markdown("")
-        
-        # Показываем частично найденные
-        if partial_skills:
-            st.markdown(f"**⚠️ Частично найдено ({len(partial_skills)}):**")
-            cols = st.columns(min(3, len(partial_skills)))
-            for i, skill in enumerate(partial_skills[:9]):
-                with cols[i % 3]:
-                    st.warning(f"⚠️ {skill}")
-            if len(partial_skills) > 9:
-                st.caption(f"... и еще {len(partial_skills) - 9} навыков")
-            st.markdown("")
-        
-        # Показываем отсутствующие
-        if missing_skills:
-            st.markdown(f"**❌ Не найдено в резюме ({len(missing_skills)}):**")
-            cols = st.columns(min(3, len(missing_skills)))
-            for i, skill in enumerate(missing_skills[:9]):
-                with cols[i % 3]:
-                    st.error(f"❌ {skill}")
-            if len(missing_skills) > 9:
-                st.caption(f"... и еще {len(missing_skills) - 9} навыков")
-            st.markdown("")
-        
-        # Метрики
-        total_required = len(job_skills)
-        found_count = len(present_skills)
-        partial_count = len(partial_skills)
-        missing_count = len(missing_skills)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Всего требований", total_required)
-        with col2:
-            st.metric("✅ Найдено", found_count, delta=f"{int(found_count/total_required*100) if total_required > 0 else 0}%")
-        with col3:
-            st.metric("⚠️ Частично", partial_count)
-        with col4:
-            st.metric("❌ Не найдено", missing_count, delta=f"-{missing_count}", delta_color="inverse")
         
         st.divider()
     
@@ -278,14 +243,13 @@ def display_results(result: Dict) -> None:
     if skills_table:
         st.subheader("📊 Сводная таблица навыков")
         
-        # Создаем DataFrame для таблицы
+        # Создаем DataFrame для таблицы (только нужные столбцы)
         table_data = []
         for item in skills_table:
             table_data.append({
                 'Навык': item['skill'],
                 'Статус': f"{item['status_icon']} {item['status_text']}",
-                'Уровень': item['level'],
-                'Что делать': item['action']
+                'Уровень': item['level']
             })
         
         df = pd.DataFrame(table_data)
@@ -296,72 +260,13 @@ def display_results(result: Dict) -> None:
             use_container_width=True,
             hide_index=True,
             column_config={
-                "Навык": st.column_config.TextColumn("Навык", width="medium"),
-                "Статус": st.column_config.TextColumn("Статус", width="small"),
-                "Уровень": st.column_config.TextColumn("Уровень", width="small"),
-                "Что делать": st.column_config.TextColumn("Что делать", width="large")
+                "Навык": st.column_config.TextColumn("Навык", width="large"),
+                "Статус": st.column_config.TextColumn("Статус", width="medium"),
+                "Уровень": st.column_config.TextColumn("Уровень", width="medium")
             }
         )
         
         st.divider()
-    
-    # Визуализация сравнения навыков (если нет таблицы)
-    resume_skills = result.get('resume_skills', [])
-    job_skills = result.get('job_skills', [])
-    
-    if (resume_skills or job_skills) and not skills_table:
-        st.subheader("🛠️ Сравнение навыков")
-        
-        if resume_skills and job_skills:
-            matching_skills = set(s.lower() for s in resume_skills) & set(s.lower() for s in job_skills)
-            missing_skills = set(s.lower() for s in job_skills) - set(s.lower() for s in resume_skills)
-            
-            # Метрики
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Всего навыков в резюме", len(resume_skills))
-            with col2:
-                st.metric("Требуется навыков", len(job_skills))
-            with col3:
-                st.metric("Совпадает", len(matching_skills), delta=f"{len(job_skills) and int(len(matching_skills)/len(job_skills)*100) or 0}%")
-            with col4:
-                st.metric("Не хватает", len(missing_skills), delta=f"-{len(missing_skills)}", delta_color="inverse")
-        
-        st.divider()
-    
-    
-    # Gap-анализ с приоритетами
-    st.subheader("🔍 Gap-анализ (чего не хватает)")
-    
-    if result.get('gaps') and len(result['gaps']) > 0:
-        # Сортируем gaps по важности (навыки - критично, остальное - важно)
-        sorted_gaps = sorted(result['gaps'], key=lambda x: 0 if x['category'] == 'Навыки' else 1)
-        
-        for gap in sorted_gaps:
-            # Определяем приоритет
-            if gap['category'] == 'Навыки':
-                priority_icon = "🔴"
-                priority_text = "Критично"
-            elif gap['category'] == 'Опыт работы':
-                priority_icon = "🟡"
-                priority_text = "Важно"
-            else:
-                priority_icon = "🟢"
-                priority_text = "Желательно"
-            
-            with st.expander(f"{priority_icon} {gap['category']} ({priority_text})", expanded=True):
-                st.write(f"**Описание:** {gap['description']}")
-                if gap.get('items'):
-                    st.write("**Детали:**")
-                    # Показываем только первые 10 элементов
-                    for item in gap['items'][:10]:
-                        st.write(f"- {item}")
-                    if len(gap['items']) > 10:
-                        st.caption(f"... и еще {len(gap['items']) - 10} элементов")
-    else:
-        st.success("✅ Отлично! Все основные требования выполнены.")
-    
-    st.divider()
     
     # Мотивационные рекомендации в стиле Школы 21
     st.subheader("💡 Рекомендации по улучшению")
