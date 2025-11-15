@@ -121,11 +121,19 @@ def display_results(result: Dict) -> None:
         </div>
         """, unsafe_allow_html=True)
         
-        # Прогресс-бар с градиентом Школы 21
+        # Прогресс-бар с градиентом Школы 21 (улучшенный)
+        progress_color = SCHOOL21_GREEN if compatibility >= 70 else SCHOOL21_BLUE if compatibility >= 50 else "#FF6B6B"
         progress_html = f"""
-        <div style="background: {SCHOOL21_BG}; border-radius: 10px; height: 30px; margin: 20px 0;">
-            <div style="background: linear-gradient(90deg, {SCHOOL21_BLUE} 0%, {SCHOOL21_GREEN} 100%);
-                        width: {compatibility}%; height: 100%; border-radius: 10px; transition: width 1s ease;"></div>
+        <div style="background: {SCHOOL21_BG}; border-radius: 15px; height: 40px; margin: 20px 0; 
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
+            <div style="background: linear-gradient(90deg, {progress_color} 0%, {progress_color}dd 100%);
+                        width: {compatibility}%; height: 100%; border-radius: 15px; 
+                        transition: width 1s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                        display: flex; align-items: center; justify-content: center;">
+                <span style="color: white; font-weight: bold; font-size: 1.1em; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                    {compatibility}%
+                </span>
+            </div>
         </div>
         """
         st.markdown(progress_html, unsafe_allow_html=True)
@@ -152,34 +160,134 @@ def display_results(result: Dict) -> None:
                 percentage = cat_data.get('percentage', 0)
                 details = cat_data.get('details', [])
                 
-                # Прогресс-бар для категории
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.markdown(f"**{name}**")
-                    # Кастомный прогресс-бар
-                    progress_color = SCHOOL21_GREEN if percentage >= 80 else SCHOOL21_BLUE if percentage >= 50 else "#FF6B6B"
-                    st.markdown(f"""
-                    <div style="background: {SCHOOL21_BG}; border-radius: 5px; height: 25px; margin: 5px 0;">
-                        <div style="background: {progress_color}; width: {percentage}%; height: 100%; 
-                                    border-radius: 5px; display: flex; align-items: center; padding-left: 10px;">
-                            <span style="color: white; font-weight: bold;">{score}/{max_score} ({percentage}%)</span>
+                # Определяем цвет прогресс-бара
+                if percentage >= 80:
+                    progress_color = SCHOOL21_GREEN
+                    bg_color = "#E8F5E9"
+                elif percentage >= 50:
+                    progress_color = SCHOOL21_BLUE
+                    bg_color = "#E3F2FD"
+                else:
+                    progress_color = "#FF6B6B"
+                    bg_color = "#FFEBEE"
+                
+                # Создаем красивую карточку для категории
+                st.markdown(f"""
+                <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid {progress_color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: {SCHOOL21_TEXT}; font-size: 1.1em;">{name}</h4>
+                        <span style="font-size: 1.3em; font-weight: bold; color: {progress_color};">
+                            {percentage}%
+                        </span>
+                    </div>
+                    
+                    <div style="background: {bg_color}; border-radius: 10px; height: 32px; margin: 10px 0; 
+                                position: relative; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                        <div style="background: linear-gradient(90deg, {progress_color} 0%, {progress_color}dd 100%); 
+                                    width: {percentage}%; height: 100%; border-radius: 10px; 
+                                    display: flex; align-items: center; justify-content: flex-end; padding-right: 10px;
+                                    transition: width 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                            <span style="color: white; font-weight: bold; font-size: 0.9em; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                                {score}/{max_score}
+                            </span>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
-                    
-                    if details:
-                        for detail in details:
-                            st.caption(f"  • {detail}")
+                </div>
+                """, unsafe_allow_html=True)
                 
-                with col2:
-                    st.metric("", f"{percentage}%")
+                # Детали под прогресс-баром
+                if details:
+                    details_html = "".join([f'<div style="color: #666; font-size: 0.9em; margin: 5px 0;">• {detail}</div>' for detail in details])
+                    st.markdown(f"""
+                    <div style="margin-left: 10px; margin-top: -10px; margin-bottom: 10px;">
+                        {details_html}
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        st.divider()
+    
+    # Детальный анализ требований и соответствия
+    st.subheader("📋 Детальный анализ требований")
+    
+    # Показываем требования из вакансии
+    job_skills = result.get('job_skills', [])
+    resume_skills = result.get('resume_skills', [])
+    
+    if job_skills:
+        st.markdown("#### 🎯 Требования из вакансии:")
+        
+        # Группируем навыки по статусу
+        present_skills = []
+        partial_skills = []
+        missing_skills = []
+        
+        resume_skills_lower = [s.lower() for s in resume_skills]
+        
+        for skill in job_skills:
+            skill_lower = skill.lower()
+            if skill_lower in resume_skills_lower:
+                present_skills.append(skill)
+            elif any(skill_lower in rs or rs in skill_lower for rs in resume_skills_lower):
+                partial_skills.append(skill)
+            else:
+                missing_skills.append(skill)
+        
+        # Показываем найденные навыки
+        if present_skills:
+            st.markdown(f"**✅ Найдено в резюме ({len(present_skills)}):**")
+            cols = st.columns(min(3, len(present_skills)))
+            for i, skill in enumerate(present_skills[:9]):  # Показываем до 9 навыков
+                with cols[i % 3]:
+                    st.success(f"✅ {skill}")
+            if len(present_skills) > 9:
+                st.caption(f"... и еще {len(present_skills) - 9} навыков")
+            st.markdown("")
+        
+        # Показываем частично найденные
+        if partial_skills:
+            st.markdown(f"**⚠️ Частично найдено ({len(partial_skills)}):**")
+            cols = st.columns(min(3, len(partial_skills)))
+            for i, skill in enumerate(partial_skills[:9]):
+                with cols[i % 3]:
+                    st.warning(f"⚠️ {skill}")
+            if len(partial_skills) > 9:
+                st.caption(f"... и еще {len(partial_skills) - 9} навыков")
+            st.markdown("")
+        
+        # Показываем отсутствующие
+        if missing_skills:
+            st.markdown(f"**❌ Не найдено в резюме ({len(missing_skills)}):**")
+            cols = st.columns(min(3, len(missing_skills)))
+            for i, skill in enumerate(missing_skills[:9]):
+                with cols[i % 3]:
+                    st.error(f"❌ {skill}")
+            if len(missing_skills) > 9:
+                st.caption(f"... и еще {len(missing_skills) - 9} навыков")
+            st.markdown("")
+        
+        # Метрики
+        total_required = len(job_skills)
+        found_count = len(present_skills)
+        partial_count = len(partial_skills)
+        missing_count = len(missing_skills)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Всего требований", total_required)
+        with col2:
+            st.metric("✅ Найдено", found_count, delta=f"{int(found_count/total_required*100) if total_required > 0 else 0}%")
+        with col3:
+            st.metric("⚠️ Частично", partial_count)
+        with col4:
+            st.metric("❌ Не найдено", missing_count, delta=f"-{missing_count}", delta_color="inverse")
         
         st.divider()
     
     # Сводная таблица навыков
     skills_table = result.get('skills_table', [])
     if skills_table:
-        st.subheader("📋 Сводная таблица навыков")
+        st.subheader("📊 Сводная таблица навыков")
         
         # Создаем DataFrame для таблицы
         table_data = []
@@ -304,7 +412,7 @@ st.markdown("""
             📄 Анализ совместимости резюме и вакансий
         </h1>
         <p style="font-size: 1.3em; color: white; margin-top: 15px; opacity: 0.95;">
-            Загрузите ваше резюме и ссылку на вакансию для анализа совместимости
+            Загрузите резюме и вакансию (по ссылке или из файла) для анализа совместимости
         </p>
     </div>
 """, unsafe_allow_html=True)
@@ -324,15 +432,38 @@ with col1:
         st.success(f"✅ Загружен: {uploaded_file.name}")
 
 with col2:
-    st.markdown("### 🔗 Ссылка на вакансию")
-    job_url = st.text_input(
-        "Вставьте URL вакансии",
-        placeholder="https://hh.ru/vacancy/12345678",
-        help="Вставьте ссылку на вакансию с любого сайта (HeadHunter, Habr и т.д.)",
+    st.markdown("### 📋 Вакансия")
+    
+    # Переключатель: ссылка или файл
+    input_method = st.radio(
+        "Выберите способ",
+        ["🔗 По ссылке", "📄 Из файла"],
+        horizontal=True,
         label_visibility="collapsed"
     )
-    if job_url:
-        st.info(f"🔗 Анализируем: {job_url[:50]}...")
+    
+    job_url = None
+    job_file = None
+    
+    if input_method == "🔗 По ссылке":
+        job_url = st.text_input(
+            "Вставьте URL вакансии",
+            placeholder="https://hh.ru/vacancy/12345678",
+            help="Вставьте ссылку на вакансию с любого сайта (HeadHunter, Habr и т.д.)",
+            label_visibility="collapsed"
+        )
+        if job_url:
+            st.info(f"🔗 Анализируем: {job_url[:50]}...")
+    else:
+        job_file = st.file_uploader(
+            "Загрузите файл с текстом вакансии",
+            type=['txt', 'docx', 'pdf'],
+            help="Загрузите файл с текстом вакансии (TXT, DOCX, PDF). Можно скопировать текст вакансии и сохранить в файл, или загрузить PDF вакансии.",
+            label_visibility="collapsed"
+        )
+        if job_file:
+            st.success(f"✅ Загружен: {job_file.name}")
+            st.info("💡 **Совет:** Скопируйте текст вакансии с сайта и сохраните в текстовый файл для более точного анализа")
 
 # Кнопка анализа в стиле Школы 21
 st.markdown("<br>", unsafe_allow_html=True)
@@ -345,26 +476,60 @@ if analyze_button:
         st.error("❌ Пожалуйста, загрузите файл резюме")
         st.stop()
     
-    if not job_url:
-        st.error("❌ Пожалуйста, введите ссылку на вакансию")
+    if not job_url and not job_file:
+        st.error("❌ Пожалуйста, введите ссылку на вакансию или загрузите файл")
         st.stop()
     
     # Показываем индикатор загрузки
     with st.spinner("⏳ Анализируем резюме и вакансию... Это может занять несколько секунд"):
         try:
-            # Сохраняем загруженный файл во временную директорию
-            file_ext = os.path.splitext(uploaded_file.name)[1].lower()
+            # Сохраняем загруженный файл резюме во временную директорию
+            resume_file_ext = os.path.splitext(uploaded_file.name)[1].lower()
             
-            with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=resume_file_ext) as tmp_file:
                 tmp_file.write(uploaded_file.read())
-                temp_file_path = tmp_file.name
+                temp_resume_path = tmp_file.name
+            
+            # Сохраняем файл вакансии, если загружен
+            temp_job_path = None
+            job_file_ext = None
+            if job_file:
+                job_file_ext = os.path.splitext(job_file.name)[1].lower()
+                with tempfile.NamedTemporaryFile(delete=False, suffix=job_file_ext, mode='wb') as tmp_job_file:
+                    tmp_job_file.write(job_file.read())
+                    temp_job_path = tmp_job_file.name
             
             try:
                 # Парсим резюме
-                resume_data = resume_parser.parse(temp_file_path)
+                resume_data = resume_parser.parse(temp_resume_path)
                 
-                # Парсим вакансию
-                job_data = job_parser.parse(job_url)
+                # Парсим вакансию (из файла или по ссылке)
+                if job_file and temp_job_path:
+                    # Парсим из файла
+                    if job_file_ext == '.txt':
+                        # Для TXT файлов используем простой парсер
+                        job_data = job_parser.parse_from_file(temp_job_path)
+                    else:
+                        # Для DOCX и PDF используем resume_parser для извлечения текста
+                        temp_text = resume_parser.parse(temp_job_path)
+                        extracted_text = temp_text.get('text', '')
+                        
+                        if not extracted_text or len(extracted_text.strip()) < 50:
+                            raise ValueError(f"Не удалось извлечь текст из файла {job_file.name}. Убедитесь, что файл содержит текст вакансии.")
+                        
+                        # Извлекаем информацию из текста
+                        job_data = {
+                            'title': job_parser._extract_title_from_text(extracted_text),
+                            'text': extracted_text,
+                            'description': extracted_text[:1000],
+                            'requirements': job_parser._extract_requirements(extracted_text),
+                            'skills': job_parser._extract_skills(extracted_text),
+                            'experience_required': job_parser._extract_experience_requirement(extracted_text),
+                            'education_required': job_parser._extract_education_requirement(extracted_text),
+                        }
+                else:
+                    # Парсим по ссылке
+                    job_data = job_parser.parse(job_url)
                 
                 # Анализируем совместимость
                 analysis_result = analyzer.analyze(resume_data, job_data)
@@ -373,9 +538,11 @@ if analyze_button:
                 display_results(analysis_result)
                 
             finally:
-                # Удаляем временный файл
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
+                # Удаляем временные файлы
+                if os.path.exists(temp_resume_path):
+                    os.remove(temp_resume_path)
+                if temp_job_path and os.path.exists(temp_job_path):
+                    os.remove(temp_job_path)
         
         except ValueError as e:
             error_msg = str(e)
@@ -450,16 +617,21 @@ with st.sidebar:
     
     st.divider()
     
-    st.markdown("### 🔗 Как использовать ссылки")
+    st.markdown("### 🔗 Как загрузить вакансию")
     st.markdown("""
-    **HeadHunter (hh.ru):**
+    **Способ 1: По ссылке**
     - Скопируйте ссылку из адресной строки
     - Убедитесь, что вакансия открыта
     - Пример: `https://hh.ru/vacancy/12345678`
     
-    **Другие сайты:**
-    - Работают ссылки с большинства сайтов
-    - Ссылка должна начинаться с http:// или https://
+    **Способ 2: Из файла (рекомендуется)**
+    - Скопируйте текст вакансии с сайта
+    - Сохраните в файл (.txt, .docx или .pdf)
+    - Или загрузите PDF вакансии напрямую
+    - Загрузите файл
+    - ✅ Более точный анализ
+    - ✅ Работает даже если сайт недоступен
+    - ✅ Поддерживает PDF, DOCX, TXT
     """)
     
     st.divider()
