@@ -33,6 +33,61 @@ class JobParser:
         self.session = requests.Session()
         self.session.headers.update(self.headers)
     
+    def parse_from_file(self, file_path: str) -> Dict[str, any]:
+        """
+        Парсит вакансию из текстового файла
+        
+        Args:
+            file_path: Путь к файлу с текстом вакансии
+        
+        Returns:
+            Dict с полями: title, description, requirements, skills, etc.
+        """
+        try:
+            # Читаем файл
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            
+            if not text or len(text.strip()) < 50:
+                raise ValueError("Файл вакансии слишком короткий или пустой")
+            
+            logger.info(f"Парсинг вакансии из файла: {file_path}")
+            
+            # Извлекаем информацию из текста
+            parsed_data = {
+                'title': self._extract_title_from_text(text),
+                'text': text,
+                'description': text[:1000],  # Первые 1000 символов как описание
+                'requirements': self._extract_requirements(text),
+                'skills': self._extract_skills(text),
+                'experience_required': self._extract_experience_requirement(text),
+                'education_required': self._extract_education_requirement(text),
+            }
+            
+            return parsed_data
+            
+        except Exception as e:
+            logger.error(f"Ошибка при парсинге файла вакансии: {str(e)}")
+            raise ValueError(f"Ошибка при чтении файла вакансии: {str(e)}")
+    
+    def _extract_title_from_text(self, text: str) -> str:
+        """Извлекает заголовок вакансии из текста"""
+        # Ищем заголовок в первых строках
+        lines = text.split('\n')[:10]
+        for line in lines:
+            line = line.strip()
+            if len(line) > 10 and len(line) < 200:
+                # Проверяем, не является ли это заголовком
+                if any(keyword in line.lower() for keyword in ['вакансия', 'требуется', 'ищем', 'ищемся', 'vacancy', 'position']):
+                    return line
+                # Если строка выглядит как заголовок (короткая, без точек)
+                if not line.endswith('.') and len(line.split()) < 15:
+                    return line
+        
+        # Если не нашли, берем первую строку
+        first_line = text.split('\n')[0].strip()
+        return first_line[:100] if first_line else "Вакансия"
+    
     def parse(self, url: str) -> Dict[str, any]:
         """
         Парсит вакансию по URL
