@@ -23,13 +23,13 @@ class CompatibilityAnalyzer:
         # 1. Детальная разбивка совместимости
         breakdown = self._calculate_detailed_breakdown(resume_data, job_data)
         
-        # 2. Расчет общего процента совместимости (только для категорий, которые указаны в резюме)
-        # Исключаем категории, которые не указаны в резюме (not_specified = True)
-        valid_categories = {k: v for k, v in breakdown.items() if not v.get('not_specified', False)}
+        # 2. Расчет общего процента совместимости (учитываем все категории)
+        # Если категория не указана в резюме, даем 0 баллов, но учитываем в расчете
+        total_score = sum(cat['score'] for cat in breakdown.values())
+        total_max = sum(cat['max'] for cat in breakdown.values())
         
-        # Считаем процент только по валидным категориям
-        if valid_categories:
-            compatibility = sum(cat['score'] for cat in valid_categories.values()) / sum(cat['max'] for cat in valid_categories.values()) * 100
+        if total_max > 0:
+            compatibility = (total_score / total_max) * 100
         else:
             compatibility = 0
         
@@ -163,29 +163,42 @@ class CompatibilityAnalyzer:
                 'missing_skills': job_skills
             }
         
-        resume_skills_lower = [s.lower() for s in resume_skills]
-        job_skills_lower = [s.lower() for s in job_skills]
+        resume_skills_lower = [s.lower().strip() for s in resume_skills]
+        job_skills_lower = [s.lower().strip() for s in job_skills]
         
-        # Находим совпадающие навыки (сохраняем оригинальные названия)
-        matching_skills_set = set(resume_skills_lower) & set(job_skills_lower)
-        missing_skills_set = set(job_skills_lower) - set(resume_skills_lower)
-        
-        # Восстанавливаем оригинальные названия навыков
+        # Находим совпадающие навыки (точное совпадение или частичное)
         matching_skills = []
-        for job_skill in job_skills:
-            if job_skill.lower() in matching_skills_set:
-                matching_skills.append(job_skill)
-        
         missing_skills = []
+        
         for job_skill in job_skills:
-            if job_skill.lower() in missing_skills_set:
+            job_skill_lower = job_skill.lower().strip()
+            found = False
+            
+            # Проверяем точное совпадение
+            if job_skill_lower in resume_skills_lower:
+                matching_skills.append(job_skill)
+                found = True
+            else:
+                # Проверяем частичное совпадение (навык из вакансии содержится в навыке резюме или наоборот)
+                for resume_skill_lower in resume_skills_lower:
+                    # Проверяем, если один навык содержит другой (например, "Python" и "Python 3")
+                    if job_skill_lower in resume_skill_lower or resume_skill_lower in job_skill_lower:
+                        # Но исключаем слишком короткие совпадения (меньше 3 символов)
+                        if len(job_skill_lower) >= 3 and len(resume_skill_lower) >= 3:
+                            matching_skills.append(job_skill)
+                            found = True
+                            break
+            
+            if not found:
                 missing_skills.append(job_skill)
         
-        score = (len(matching_skills_set) / len(job_skills_lower)) * max_score
+        matching_count = len(matching_skills)
+        total_count = len(job_skills)
+        score = (matching_count / total_count) * max_score if total_count > 0 else 0
         
         details = []
         if matching_skills:
-            details.append(f'✅ Найдено: {len(matching_skills)} из {len(job_skills)}')
+            details.append(f'✅ Найдено: {matching_count} из {total_count}')
             # Показываем первые 5 найденных навыков
             skills_list = ', '.join(matching_skills[:5])
             if len(matching_skills) > 5:
@@ -200,7 +213,7 @@ class CompatibilityAnalyzer:
             details.append(f'Не хватает: {skills_list}')
         
         # Добавляем объяснение расчета
-        details.append(f'Расчет: {len(matching_skills_set)}/{len(job_skills_lower)} × {max_score} = {round(score, 1)} баллов')
+        details.append(f'Расчет: {matching_count}/{total_count} × {max_score} = {round(score, 1)} баллов')
         
         return {
             'score': round(score, 1), 
