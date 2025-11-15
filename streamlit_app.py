@@ -171,39 +171,28 @@ def display_results(result: Dict) -> None:
                     progress_color = "#FF6B6B"
                     bg_color = "#FFEBEE"
                 
-                # Создаем красивую карточку для категории
-                st.markdown(f"""
-                <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; 
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid {progress_color};">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h4 style="margin: 0; color: {SCHOOL21_TEXT}; font-size: 1.1em;">{name}</h4>
-                        <span style="font-size: 1.3em; font-weight: bold; color: {progress_color};">
-                            {percentage}%
-                        </span>
-                    </div>
-                    
-                    <div style="background: {bg_color}; border-radius: 10px; height: 32px; margin: 10px 0; 
-                                position: relative; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
-                        <div style="background: linear-gradient(90deg, {progress_color} 0%, {progress_color}dd 100%); 
-                                    width: {percentage}%; height: 100%; border-radius: 10px; 
-                                    display: flex; align-items: center; justify-content: flex-end; padding-right: 10px;
-                                    transition: width 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                            <span style="color: white; font-weight: bold; font-size: 0.9em; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
-                                {score}/{max_score}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                # Создаем красивую карточку для категории используя Streamlit компоненты
+                # Заголовок и процент в одной строке
+                col_title, col_percent = st.columns([3, 1])
+                with col_title:
+                    st.markdown(f"### {name}")
+                with col_percent:
+                    st.metric("", f"{percentage}%")
                 
-                # Детали под прогресс-баром
+                # Прогресс-бар с цветом
+                progress_value = percentage / 100
+                st.progress(progress_value)
+                
+                # Счет и детали
+                st.caption(f"**{score}/{max_score}** баллов")
+                
+                # Детали
                 if details:
-                    details_html = "".join([f'<div style="color: #666; font-size: 0.9em; margin: 5px 0;">• {detail}</div>' for detail in details])
-                    st.markdown(f"""
-                    <div style="margin-left: 10px; margin-top: -10px; margin-bottom: 10px;">
-                        {details_html}
-                    </div>
-                    """, unsafe_allow_html=True)
+                    for detail in details:
+                        st.caption(f"  • {detail}")
+                
+                # Разделитель между категориями
+                st.markdown("<br>", unsafe_allow_html=True)
         
         st.divider()
     
