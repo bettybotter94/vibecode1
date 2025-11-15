@@ -15,7 +15,7 @@ from analyzer import CompatibilityAnalyzer
 # Настройка страницы в стиле Школы 21
 st.set_page_config(
     page_title="Анализ резюме и вакансий | Школа 21",
-    page_icon="📄",
+    page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -155,6 +155,14 @@ def display_results(result: Dict) -> None:
         for key, name in breakdown_names.items():
             if key in breakdown:
                 cat_data = breakdown[key]
+                
+                # Проверяем, указана ли категория в резюме
+                if cat_data.get('not_specified', False):
+                    # Показываем плашку, что категория не указана
+                    st.info(f"ℹ️ **{name}** не указаны в резюме. Эта категория не учитывается в общем расчете совместимости.")
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    continue
+                
                 score = cat_data['score']
                 max_score = cat_data['max']
                 percentage = cat_data.get('percentage', 0)
@@ -163,7 +171,7 @@ def display_results(result: Dict) -> None:
                 # Определяем цвет прогресс-бара
                 if percentage >= 80:
                     progress_color = SCHOOL21_GREEN
-                    bg_color = "#E8F5E9"
+                    bg_color = "#E8F5F9"
                 elif percentage >= 50:
                     progress_color = SCHOOL21_BLUE
                     bg_color = "#E3F2FD"
@@ -303,7 +311,7 @@ st.markdown("""
     <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #00AEEF 0%, #00B956 100%);
                 border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 174, 239, 0.2);">
         <h1 style="font-size: 3.5em; color: white; margin: 0; font-weight: bold;">
-            📄 Анализ совместимости резюме и вакансий
+            🎓 Анализ совместимости резюме и вакансий
         </h1>
         <p style="font-size: 1.3em; color: white; margin-top: 15px; opacity: 0.95;">
             Загрузите резюме и вакансию (по ссылке или из файла) для анализа совместимости
@@ -498,7 +506,6 @@ with st.sidebar:
     **Результаты включают:**
     - 📊 Детальную разбивку совместимости
     - 📋 Сводную таблицу навыков
-    - 🔍 Gap-анализ с приоритетами
     - 💡 Мотивационные рекомендации
     """)
     
