@@ -2,6 +2,7 @@
 Модуль для парсинга резюме из различных форматов
 """
 import os
+import re
 from typing import Dict, List
 import PyPDF2
 from docx import Document
@@ -73,7 +74,7 @@ class ResumeParser:
         return text
     
     def _extract_skills(self, text: str) -> List[str]:
-        """Извлекает навыки из текста с улучшенным поиском"""
+        """Извлекает навыки из текста с улучшенным поиском и проверкой контекста"""
         # Расширенный список навыков с синонимами
         skills_dict = {
             # Языки программирования
@@ -167,20 +168,98 @@ class ResumeParser:
         found_skills = []
         found_skill_names = set()  # Чтобы избежать дубликатов
         
-        # Ищем навыки по синонимам
+        # Ключевые слова, указывающие на навык (контекст)
+        skill_context_keywords = [
+            'работал', 'работала', 'работаю', 'работает',
+            'опыт', 'опытом', 'опыте',
+            'знаю', 'знает', 'знание',
+            'владею', 'владеет', 'владение',
+            'использую', 'использует', 'использование',
+            'применяю', 'применяет', 'применение',
+            'умею', 'умеет', 'умение',
+            'навык', 'навыки', 'навыками',
+            'технология', 'технологии', 'технологиями',
+            'инструмент', 'инструменты', 'инструментами',
+            'язык', 'языки', 'языками',
+            'фреймворк', 'фреймворки', 'фреймворками',
+            'библиотека', 'библиотеки', 'библиотеками',
+            'с', 'в', 'на', 'через', 'посредством'
+        ]
+        
+        # Слова, которые исключают навык (ложные срабатывания)
+        exclude_keywords = [
+            'не знаю', 'не умею', 'не владею', 'не использую',
+            'не работал', 'не работала', 'не работаю',
+            'без опыта', 'нет опыта', 'не имею опыта'
+        ]
+        
+        # Ищем навыки по синонимам с проверкой контекста
         for skill_name, synonyms in skills_dict.items():
             for synonym in synonyms:
-                if synonym.lower() in text_lower:
-                    if skill_name not in found_skill_names:
-                        found_skills.append(skill_name)
-                        found_skill_names.add(skill_name)
+                synonym_lower = synonym.lower()
+                
+                # Проверяем, что синоним не является частью другого слова
+                # Ищем слово целиком (с границами слов)
+                pattern = r'\b' + re.escape(synonym_lower) + r'\b'
+                matches = list(re.finditer(pattern, text_lower))
+                
+                if not matches:
+                    continue
+                
+                # Проверяем каждый случай вхождения
+                found_valid = False
+                for match in matches:
+                    start_pos = match.start()
+                    end_pos = match.end()
+                    
+                    # Берем контекст вокруг найденного слова (50 символов до и после)
+                    context_start = max(0, start_pos - 50)
+                    context_end = min(len(text_lower), end_pos + 50)
+                    context = text_lower[context_start:context_end]
+                    
+                    # Проверяем, нет ли исключающих слов
+                    has_exclude = any(exc in context for exc in exclude_keywords)
+                    if has_exclude:
+                        continue
+                    
+                    # Для некоторых навыков нужна более строгая проверка
+                    if skill_name == 'Git':
+                        # Git должен быть упомянут отдельно, не только как часть GitHub/GitLab
+                        if 'github' in context or 'gitlab' in context or 'bitbucket' in context:
+                            # Проверяем, что Git упомянут отдельно
+                            if not re.search(r'\bgit\b', context.replace('github', '').replace('gitlab', '').replace('bitbucket', '')):
+                                continue
+                    
+                    if skill_name == 'REST API':
+                        # REST API должен быть упомянут в контексте API/разработки
+                        api_context = ['api', 'интерфейс', 'endpoint', 'запрос', 'response', 'http', 'https']
+                        if not any(api_ctx in context for api_ctx in api_context):
+                            # Если нет контекста API, проверяем наличие ключевых слов навыка
+                            if not any(keyword in context for keyword in skill_context_keywords):
+                                continue
+                    
+                    # Проверяем наличие контекстных слов (для большинства навыков)
+                    # Исключение: если навык упомянут в списке навыков или технологий
+                    is_in_skills_section = any(keyword in context for keyword in ['навык', 'технологи', 'инструмент', 'язык', 'фреймворк', 'библиотека'])
+                    has_context = any(keyword in context for keyword in skill_context_keywords)
+                    
+                    # Навык считается валидным, если:
+                    # 1. Он в секции навыков/технологий, ИЛИ
+                    # 2. Есть контекстные слова рядом
+                    if is_in_skills_section or has_context:
+                        found_valid = True
+                        break
+                
+                if found_valid and skill_name not in found_skill_names:
+                    found_skills.append(skill_name)
+                    found_skill_names.add(skill_name)
                     break  # Нашли один синоним, переходим к следующему навыку
         
         # Дополнительный поиск: ищем паттерны типа "работал с X", "опыт работы с Y"
-        import re
+        # (этот поиск уже учитывает контекст через паттерны)
         patterns = [
-            r'(?:работал|работала|опыт|знаю|владею|использую|применяю)[\s\w,]+(?:с|в|на)\s+([A-Z][a-zA-Z\s\+#\.]+)',
-            r'(?:технологии|технология|навыки|навык)[\s:]+([A-Z][a-zA-Z\s,]+)',
+            r'(?:работал|работала|работаю|опыт|знаю|владею|использую|применяю|умею)[\s\w,]+(?:с|в|на)\s+([A-Z][a-zA-Z\s\+#\.]+)',
+            r'(?:технологии|технология|навыки|навык|инструменты|инструмент)[\s:]+([A-Z][a-zA-Z\s,]+)',
         ]
         
         for pattern in patterns:
@@ -188,10 +267,12 @@ class ResumeParser:
             for match in matches:
                 # Очищаем и проверяем, не является ли это уже найденным навыком
                 cleaned = match.strip().rstrip(',').split(',')[0].strip()
-                if len(cleaned) > 2 and cleaned not in found_skill_names:
+                if len(cleaned) > 2 and len(cleaned) < 50:  # Ограничиваем длину
                     # Проверяем, не является ли это известным навыком
+                    cleaned_lower = cleaned.lower()
                     for skill_name, synonyms in skills_dict.items():
-                        if any(syn.lower() in cleaned.lower() for syn in synonyms):
+                        # Проверяем точное совпадение или вхождение синонима
+                        if any(syn.lower() == cleaned_lower or syn.lower() in cleaned_lower for syn in synonyms):
                             if skill_name not in found_skill_names:
                                 found_skills.append(skill_name)
                                 found_skill_names.add(skill_name)
