@@ -23,8 +23,15 @@ class CompatibilityAnalyzer:
         # 1. Детальная разбивка совместимости
         breakdown = self._calculate_detailed_breakdown(resume_data, job_data)
         
-        # 2. Расчет общего процента совместимости
-        compatibility = sum(cat['score'] for cat in breakdown.values()) / sum(cat['max'] for cat in breakdown.values()) * 100
+        # 2. Расчет общего процента совместимости (только для категорий, которые указаны в резюме)
+        # Исключаем категории, которые не указаны в резюме (not_specified = True)
+        valid_categories = {k: v for k, v in breakdown.items() if not v.get('not_specified', False)}
+        
+        # Считаем процент только по валидным категориям
+        if valid_categories:
+            compatibility = sum(cat['score'] for cat in valid_categories.values()) / sum(cat['max'] for cat in valid_categories.values()) * 100
+        else:
+            compatibility = 0
         
         # 3. Сводная таблица навыков
         skills_table = self._create_skills_table(resume_data, job_data)
@@ -97,42 +104,50 @@ class CompatibilityAnalyzer:
             max_score=5
         )
         
-        return {
+        # Определяем, какие категории не указаны в резюме
+        result_breakdown = {
             'required_skills': {
                 'score': required_score['score'],
                 'max': required_score['max'],
-                'percentage': round(required_score['score'] / required_score['max'] * 100, 1),
+                'percentage': round(required_score['score'] / required_score['max'] * 100, 1) if required_score['max'] > 0 else 0,
                 'details': required_score['details'],
                 'matching_skills': required_score.get('matching_skills', []),
-                'missing_skills': required_score.get('missing_skills', [])
+                'missing_skills': required_score.get('missing_skills', []),
+                'not_specified': not bool(resume_data.get('skills')) or len(resume_data.get('skills', [])) == 0
             },
             'preferred_skills': {
                 'score': preferred_score['score'],
                 'max': preferred_score['max'],
-                'percentage': round(preferred_score['score'] / preferred_score['max'] * 100, 1),
+                'percentage': round(preferred_score['score'] / preferred_score['max'] * 100, 1) if preferred_score['max'] > 0 else 0,
                 'details': preferred_score['details'],
                 'matching_skills': preferred_score.get('matching_skills', []),
-                'missing_skills': preferred_score.get('missing_skills', [])
+                'missing_skills': preferred_score.get('missing_skills', []),
+                'not_specified': not bool(resume_data.get('skills')) or len(resume_data.get('skills', [])) == 0
             },
             'experience': {
                 'score': experience_score['score'],
                 'max': experience_score['max'],
-                'percentage': round(experience_score['score'] / experience_score['max'] * 100, 1),
-                'details': experience_score['details']
+                'percentage': round(experience_score['score'] / experience_score['max'] * 100, 1) if experience_score['max'] > 0 else 0,
+                'details': experience_score['details'],
+                'not_specified': not bool(resume_data.get('experience'))
             },
             'education': {
                 'score': education_score['score'],
                 'max': education_score['max'],
-                'percentage': round(education_score['score'] / education_score['max'] * 100, 1),
-                'details': education_score['details']
+                'percentage': round(education_score['score'] / education_score['max'] * 100, 1) if education_score['max'] > 0 else 0,
+                'details': education_score['details'],
+                'not_specified': not bool(resume_data.get('education'))
             },
             'soft_skills': {
                 'score': soft_skills_score['score'],
                 'max': soft_skills_score['max'],
-                'percentage': round(soft_skills_score['score'] / soft_skills_score['max'] * 100, 1),
-                'details': soft_skills_score['details']
+                'percentage': round(soft_skills_score['score'] / soft_skills_score['max'] * 100, 1) if soft_skills_score['max'] > 0 else 0,
+                'details': soft_skills_score['details'],
+                'not_specified': False  # Soft skills всегда учитываем
             }
         }
+        
+        return result_breakdown
     
     def _compare_skills_detailed(self, resume_skills: List[str], job_skills: List[str], max_score: int) -> Dict:
         """Детальное сравнение навыков с возвратом деталей и конкретных навыков"""
