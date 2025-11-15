@@ -102,13 +102,17 @@ class CompatibilityAnalyzer:
                 'score': required_score['score'],
                 'max': required_score['max'],
                 'percentage': round(required_score['score'] / required_score['max'] * 100, 1),
-                'details': required_score['details']
+                'details': required_score['details'],
+                'matching_skills': required_score.get('matching_skills', []),
+                'missing_skills': required_score.get('missing_skills', [])
             },
             'preferred_skills': {
                 'score': preferred_score['score'],
                 'max': preferred_score['max'],
                 'percentage': round(preferred_score['score'] / preferred_score['max'] * 100, 1),
-                'details': preferred_score['details']
+                'details': preferred_score['details'],
+                'matching_skills': preferred_score.get('matching_skills', []),
+                'missing_skills': preferred_score.get('missing_skills', [])
             },
             'experience': {
                 'score': experience_score['score'],
@@ -131,28 +135,65 @@ class CompatibilityAnalyzer:
         }
     
     def _compare_skills_detailed(self, resume_skills: List[str], job_skills: List[str], max_score: int) -> Dict:
-        """Детальное сравнение навыков с возвратом деталей"""
+        """Детальное сравнение навыков с возвратом деталей и конкретных навыков"""
         if not job_skills:
-            return {'score': max_score, 'max': max_score, 'details': []}
+            return {'score': max_score, 'max': max_score, 'details': [], 'matching_skills': [], 'missing_skills': []}
         
         if not resume_skills:
-            return {'score': 0, 'max': max_score, 'details': [f'Отсутствуют все {len(job_skills)} навыков']}
+            return {
+                'score': 0, 
+                'max': max_score, 
+                'details': [f'Отсутствуют все {len(job_skills)} навыков'],
+                'matching_skills': [],
+                'missing_skills': job_skills
+            }
         
         resume_skills_lower = [s.lower() for s in resume_skills]
         job_skills_lower = [s.lower() for s in job_skills]
         
-        matching_skills = set(resume_skills_lower) & set(job_skills_lower)
-        missing_skills = set(job_skills_lower) - set(resume_skills_lower)
+        # Находим совпадающие навыки (сохраняем оригинальные названия)
+        matching_skills_set = set(resume_skills_lower) & set(job_skills_lower)
+        missing_skills_set = set(job_skills_lower) - set(resume_skills_lower)
         
-        score = (len(matching_skills) / len(job_skills_lower)) * max_score
+        # Восстанавливаем оригинальные названия навыков
+        matching_skills = []
+        for job_skill in job_skills:
+            if job_skill.lower() in matching_skills_set:
+                matching_skills.append(job_skill)
+        
+        missing_skills = []
+        for job_skill in job_skills:
+            if job_skill.lower() in missing_skills_set:
+                missing_skills.append(job_skill)
+        
+        score = (len(matching_skills_set) / len(job_skills_lower)) * max_score
         
         details = []
         if matching_skills:
-            details.append(f'Найдено совпадений: {len(matching_skills)} из {len(job_skills_lower)}')
+            details.append(f'✅ Найдено: {len(matching_skills)} из {len(job_skills)}')
+            # Показываем первые 5 найденных навыков
+            skills_list = ', '.join(matching_skills[:5])
+            if len(matching_skills) > 5:
+                skills_list += f' и еще {len(matching_skills) - 5}'
+            details.append(f'Навыки: {skills_list}')
         if missing_skills:
-            details.append(f'Отсутствует: {len(missing_skills)} навыков')
+            details.append(f'❌ Отсутствует: {len(missing_skills)} навыков')
+            # Показываем первые 5 отсутствующих навыков
+            skills_list = ', '.join(missing_skills[:5])
+            if len(missing_skills) > 5:
+                skills_list += f' и еще {len(missing_skills) - 5}'
+            details.append(f'Не хватает: {skills_list}')
         
-        return {'score': round(score, 1), 'max': max_score, 'details': details}
+        # Добавляем объяснение расчета
+        details.append(f'Расчет: {len(matching_skills_set)}/{len(job_skills_lower)} × {max_score} = {round(score, 1)} баллов')
+        
+        return {
+            'score': round(score, 1), 
+            'max': max_score, 
+            'details': details,
+            'matching_skills': matching_skills,
+            'missing_skills': missing_skills
+        }
     
     def _compare_experience_detailed(self, resume_experience: str, job_requirements: str, max_score: int) -> Dict:
         """Детальное сравнение опыта работы"""
@@ -164,9 +205,17 @@ class CompatibilityAnalyzer:
         
         details = []
         if resume_experience:
-            details.append('Опыт работы описан в резюме')
+            details.append('✅ Опыт работы описан в резюме')
+            # Показываем первые 100 символов опыта
+            exp_preview = resume_experience[:100].replace('\n', ' ')
+            if len(resume_experience) > 100:
+                exp_preview += '...'
+            details.append(f'Описание: {exp_preview}')
         else:
-            details.append('Опыт работы не описан')
+            details.append('❌ Опыт работы не описан в резюме')
+        
+        # Добавляем объяснение расчета
+        details.append(f'Расчет: схожесть {round(similarity * 100, 1)}% × {max_score} = {round(score, 1)} баллов')
         
         return {'score': round(score, 1), 'max': max_score, 'details': details}
     
@@ -176,7 +225,7 @@ class CompatibilityAnalyzer:
             return {'score': max_score, 'max': max_score, 'details': ['Требования к образованию не указаны']}
         
         if not resume_education:
-            return {'score': 0, 'max': max_score, 'details': ['Образование не указано в резюме']}
+            return {'score': 0, 'max': max_score, 'details': ['❌ Образование не указано в резюме', f'Расчет: 0/{max_score} = 0 баллов']}
         
         resume_lower = resume_education.lower()
         job_lower = job_education.lower()
@@ -186,15 +235,24 @@ class CompatibilityAnalyzer:
         resume_has_education = any(kw in resume_lower for kw in education_keywords)
         job_requires_education = any(kw in job_lower for kw in education_keywords)
         
+        details = []
         if not job_requires_education:
             score = max_score
-            details = ['Требования к образованию не критичны']
+            details = ['✅ Требования к образованию не критичны']
+            details.append(f'Расчет: {max_score}/{max_score} = {max_score} баллов')
         elif resume_has_education:
             score = max_score
-            details = ['Образование соответствует требованиям']
+            # Показываем информацию об образовании
+            edu_preview = resume_education[:80].replace('\n', ' ')
+            if len(resume_education) > 80:
+                edu_preview += '...'
+            details = ['✅ Образование соответствует требованиям']
+            details.append(f'Указано: {edu_preview}')
+            details.append(f'Расчет: {max_score}/{max_score} = {max_score} баллов')
         else:
             score = max_score * 0.5
-            details = ['Образование указано, но может не соответствовать требованиям']
+            details = ['⚠️ Образование указано, но может не соответствовать требованиям']
+            details.append(f'Расчет: частичное соответствие × {max_score} = {round(score, 1)} баллов')
         
         return {'score': round(score, 1), 'max': max_score, 'details': details}
     
@@ -228,11 +286,16 @@ class CompatibilityAnalyzer:
         # Если в вакансии не упоминаются soft skills, даем полный балл
         if not any(kw in job_lower for keywords in soft_skills_keywords.values() for kw in keywords):
             score = max_score
-            details = ['Soft skills не требуются']
+            details = ['✅ Soft skills не требуются']
+            details.append(f'Расчет: {max_score}/{max_score} = {max_score} баллов')
         else:
-            score = (found_soft_skills / len(soft_skills_keywords)) * max_score
+            total_soft_skills_required = len([name for name, keywords in soft_skills_keywords.items() 
+                                            if any(kw in job_lower for kw in keywords)])
+            score = (found_soft_skills / total_soft_skills_required) * max_score if total_soft_skills_required > 0 else 0
             if not details:
-                details = ['Soft skills не найдены в резюме']
+                details = ['❌ Soft skills не найдены в резюме']
+            # Добавляем объяснение расчета
+            details.append(f'Расчет: найдено {found_soft_skills} из {total_soft_skills_required} × {max_score} = {round(score, 1)} баллов')
         
         return {'score': round(score, 1), 'max': max_score, 'details': details}
     
